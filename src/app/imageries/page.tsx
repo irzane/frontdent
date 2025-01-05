@@ -1,54 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import DefaultLayout from "@/components/Layouts/DefaultLaout";
+import axios from "axios";
+
+// Define the Imagerie type
+interface Imagerie {
+    imagerieID: number;
+    patient: string;
+    dateImagerie: string;
+    typeImagerie: string;
+    description: string;
+    urlImage?: string;
+}
 
 const Imageries = () => {
-    const [imageries, setImageries] = useState([
-        {
-            id: 1,
-            patient: "Ahmed El Fassi",
-            date: "2023-12-20",
-            type_imagerie: "Radiographie dentaire",
-            description: "Radiographie des molaires",
-            fichier: "radiographie1.png",
-        },
-        {
-            id: 2,
-            patient: "Fatima Berrada",
-            date: "2023-12-25",
-            type_imagerie: "Scanner",
-            description: "Scanner maxillaire",
-            fichier: "scanner1.pdf",
-        },
-    ]);
-
+    const [imageries, setImageries] = useState<Imagerie[]>([]);
     const [search, setSearch] = useState("");
     const [showAddForm, setShowAddForm] = useState(false);
     const [newImagerie, setNewImagerie] = useState({
         patient: "",
-        date: "",
-        type_imagerie: "",
+        dateImagerie: "",
+        typeImagerie: "",
         description: "",
-        fichier: null,
+        urlImage: "",
     });
 
+    // Fetch the data from the API
+    useEffect(() => {
+        axios
+            .get("http://localhost:5254/api/Imagerie")
+            .then((response) => {
+                console.log(response.data); // Vérifie les données récupérées
+                setImageries(response.data);
+            })
+            .catch((error) => {
+                console.error("Error fetching imageries:", error);
+            });
+    }, []);
+
     const handleAddImagerie = () => {
-        setImageries([...imageries, { ...newImagerie, id: imageries.length + 1 }]);
-        setShowAddForm(false);
-        setNewImagerie({
-            patient: "",
-            date: "",
-            type_imagerie: "",
-            description: "",
-            fichier: null,
-        });
+        const formData = new FormData();
+        formData.append("patient", newImagerie.patient);
+        formData.append("date", newImagerie.dateImagerie);
+        formData.append("type_imagerie", newImagerie.typeImagerie);
+        formData.append("description", newImagerie.description);
+        formData.append("fichier", newImagerie.urlImage);
+
+        axios
+            .post("http://localhost:5254/api/Imagerie", formData)
+            .then((response) => {
+                setImageries([...imageries, response.data]); // Add the new imagery to the list
+                setShowAddForm(false);
+                setNewImagerie({
+                    patient: "",
+                    dateImagerie: "",
+                    typeImagerie: "",
+                    description: "",
+                    urlImage: "",
+                });
+            })
+            .catch((error) => {
+                console.error("Error adding new imagerie:", error);
+            });
     };
 
+    // Filtrer les imageries en fonction de la recherche
     const filteredImageries = imageries.filter((imagerie) =>
-        imagerie.patient.toLowerCase().includes(search.toLowerCase())
+        imagerie.patient?.toLowerCase().includes(search.toLowerCase()) || false
     );
+
+    console.log(filteredImageries); // Vérifie les imageries filtrées
 
     return (
         <DefaultLayout>
@@ -85,30 +108,38 @@ const Imageries = () => {
                         </tr>
                     </thead>
                     <tbody className="text-gray-700">
-                        {filteredImageries.map((imagerie) => (
-                            <tr
-                                key={imagerie.id}
-                                className={`${
-                                    imagerie.id % 2 === 0 ? "bg-gray-50" : "bg-white"
-                                } hover:bg-gray-100 transition-colors duration-200`}
-                            >
-                                <td className="px-6 py-4 text-sm font-medium">{imagerie.id}</td>
-                                <td className="px-6 py-4 text-sm">{imagerie.patient}</td>
-                                <td className="px-6 py-4 text-sm">{imagerie.date}</td>
-                                <td className="px-6 py-4 text-sm">{imagerie.type_imagerie}</td>
-                                <td className="px-6 py-4 text-sm">{imagerie.description}</td>
-                                <td className="px-6 py-4 text-sm">
-                                    <a
-                                        href={`imageries/${imagerie.fichier}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-500 underline"
-                                    >
-                                        Voir le fichier
-                                    </a>
+                        {filteredImageries.length > 0 ? (
+                            filteredImageries.map((imagerie) => (
+                                <tr
+                                    key={imagerie.imagerieID}
+                                    className={`${
+                                        imagerie.imagerieID % 2 === 0 ? "bg-gray-50" : "bg-white"
+                                    } hover:bg-gray-100 transition-colors duration-200`}
+                                >
+                                    <td className="px-6 py-4 text-sm font-medium">{imagerie.imagerieID}</td>
+                                    <td className="px-6 py-4 text-sm">{imagerie.patient}</td>
+                                    <td className="px-6 py-4 text-sm">{imagerie.dateImagerie}</td>
+                                    <td className="px-6 py-4 text-sm">{imagerie.typeImagerie}</td>
+                                    <td className="px-6 py-4 text-sm">{imagerie.description}</td>
+                                    <td className="px-6 py-4 text-sm">
+                                        <a
+                                            href={`imageries/${imagerie.urlImage}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-500 underline"
+                                        >
+                                            Voir le fichier
+                                        </a>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-4 text-sm text-center">
+                                    Aucune imagerie trouvée.
                                 </td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
 
@@ -133,9 +164,9 @@ const Imageries = () => {
                                     <label className="block font-medium">Date</label>
                                     <input
                                         type="date"
-                                        value={newImagerie.date}
+                                        value={newImagerie.dateImagerie}
                                         onChange={(e) =>
-                                            setNewImagerie({ ...newImagerie, date: e.target.value })
+                                            setNewImagerie({ ...newImagerie, dateImagerie: e.target.value })
                                         }
                                         className="mt-1 w-full rounded border border-gray-300 p-2"
                                     />
@@ -145,9 +176,9 @@ const Imageries = () => {
                                     <label className="block font-medium">Type d'Imagerie</label>
                                     <input
                                         type="text"
-                                        value={newImagerie.type_imagerie}
+                                        value={newImagerie.typeImagerie}
                                         onChange={(e) =>
-                                            setNewImagerie({ ...newImagerie, type_imagerie: e.target.value })
+                                            setNewImagerie({ ...newImagerie, typeImagerie: e.target.value })
                                         }
                                         className="mt-1 w-full rounded border border-gray-300 p-2"
                                     />
@@ -169,7 +200,7 @@ const Imageries = () => {
                                     <input
                                         type="file"
                                         onChange={(e) =>
-                                            setNewImagerie({ ...newImagerie, fichier: e.target.files[0] })
+                                            setNewImagerie({ ...newImagerie, urlImage: e.target.files?.[0]?.name || "" })
                                         }
                                         className="mt-1 w-full"
                                     />
