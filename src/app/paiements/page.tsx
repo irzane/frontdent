@@ -14,7 +14,7 @@ const Paiements = () => {
             montant: 500,
             note: "Aucun commentaire",
         },
-        {
+        {   
             id: 2,
             acte: "Détartrage",
             date: "2024-12-20",
